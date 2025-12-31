@@ -17,28 +17,57 @@ docker run -it --rm \
 - [Docker](https://docs.docker.com/get-docker/) installed
 - [OpenAI API key](https://platform.openai.com/api-keys) or ChatGPT account for OAuth
 
-## Usage
+## Usage Examples
 
-### Using Docker Run
+### Basic Interactive Session
 
 ```bash
-# Basic usage with API key
+# Start an interactive Codex session
 docker run -it --rm \
   -v $(pwd):/workspace \
   -e OPENAI_API_KEY=$OPENAI_API_KEY \
   ungb/codex
+```
 
-# With persistent config (remembers settings between runs)
+### One-Shot Commands
+
+```bash
+# Ask a question about your codebase
 docker run -it --rm \
   -v $(pwd):/workspace \
-  -v codex-config:/home/coder/.codex \
   -e OPENAI_API_KEY=$OPENAI_API_KEY \
-  ungb/codex
+  ungb/codex \
+  codex "explain the architecture of this project"
 
-# With git/ssh support
+# Generate code
 docker run -it --rm \
   -v $(pwd):/workspace \
-  -v codex-config:/home/coder/.codex \
+  -e OPENAI_API_KEY=$OPENAI_API_KEY \
+  ungb/codex \
+  codex "add input validation to the user form"
+
+# Fix bugs
+docker run -it --rm \
+  -v $(pwd):/workspace \
+  -e OPENAI_API_KEY=$OPENAI_API_KEY \
+  ungb/codex \
+  codex "fix the type errors in src/utils"
+
+# Refactor code
+docker run -it --rm \
+  -v $(pwd):/workspace \
+  -e OPENAI_API_KEY=$OPENAI_API_KEY \
+  ungb/codex \
+  codex "refactor this function to use async/await"
+```
+
+### With Full Configuration (Recommended)
+
+```bash
+# Full setup with persistent config, git, and SSH
+docker run -it --rm \
+  -v $(pwd):/workspace \
+  -v ~/.codex:/home/coder/.codex \
   -v ~/.ssh:/home/coder/.ssh:ro \
   -v ~/.gitconfig:/home/coder/.gitconfig:ro \
   -e OPENAI_API_KEY=$OPENAI_API_KEY \
@@ -47,13 +76,13 @@ docker run -it --rm \
 
 ### Using Docker Compose
 
-1. Clone this repo or copy `docker-compose.yml` to your project:
+1. Copy `docker-compose.yml` to your project:
 
 ```bash
 curl -O https://raw.githubusercontent.com/ungb/codex-docker/main/docker-compose.yml
 ```
 
-2. Create a `.env` file with your API key:
+2. Create a `.env` file:
 
 ```bash
 echo "OPENAI_API_KEY=your-key-here" > .env
@@ -62,35 +91,134 @@ echo "OPENAI_API_KEY=your-key-here" > .env
 3. Run:
 
 ```bash
+# Interactive session
 docker compose run --rm codex
+
+# One-shot command
+docker compose run --rm codex codex "explain this code"
 ```
 
-### Run a Specific Command
+### Full Auto Mode (Careful!)
 
 ```bash
-# Run codex with arguments
+# Auto-approve all changes (use with caution)
 docker run -it --rm \
   -v $(pwd):/workspace \
   -e OPENAI_API_KEY=$OPENAI_API_KEY \
   ungb/codex \
-  codex "explain this codebase"
-
-# Check version
-docker run -it --rm ungb/codex codex --version
-
-# Run with full auto-approve (be careful!)
-docker run -it --rm \
-  -v $(pwd):/workspace \
-  -e OPENAI_API_KEY=$OPENAI_API_KEY \
-  ungb/codex \
-  codex --full-auto "fix the tests"
+  codex --full-auto "implement the TODO items in this file"
 ```
+
+### Quiet Mode
+
+```bash
+# Less verbose output
+docker run -it --rm \
+  -v $(pwd):/workspace \
+  -e OPENAI_API_KEY=$OPENAI_API_KEY \
+  ungb/codex \
+  codex --quiet "fix the failing tests"
+```
+
+## Sharing Your Codex Configuration
+
+The `~/.codex` directory contains your Codex configuration and session history.
+
+### What's in ~/.codex
+
+```
+~/.codex/
+├── config.json           # Settings and preferences
+├── instructions.md       # Custom instructions for Codex
+└── history/              # Session history
+```
+
+### Mount Your Configuration
+
+```bash
+# Share your Codex config folder
+docker run -it --rm \
+  -v $(pwd):/workspace \
+  -v ~/.codex:/home/coder/.codex \
+  -e OPENAI_API_KEY=$OPENAI_API_KEY \
+  ungb/codex
+```
+
+### Custom Instructions
+
+Create `~/.codex/instructions.md` with custom instructions that Codex will follow:
+
+```markdown
+# My Codex Instructions
+
+- Always use TypeScript strict mode
+- Prefer functional programming patterns
+- Add JSDoc comments to public functions
+```
+
+Then mount it:
+
+```bash
+docker run -it --rm \
+  -v $(pwd):/workspace \
+  -v ~/.codex:/home/coder/.codex \
+  -e OPENAI_API_KEY=$OPENAI_API_KEY \
+  ungb/codex
+```
+
+## MCP (Model Context Protocol) Support
+
+> **Warning**: MCP support in Docker containers is limited and may require additional configuration.
+
+### Current Limitations
+
+MCP servers may not work out of the box in Docker because:
+
+1. **Stdio-based MCP servers** need the server binary installed inside the container
+2. **Network-based MCP servers** need proper network configuration
+3. **MCP servers that access local resources** need those resources mounted
+4. **Authentication** for MCP servers may not transfer into the container
+
+### What Might Work
+
+| MCP Type | Status | Notes |
+|----------|--------|-------|
+| HTTP/SSE servers (remote) | May work | Requires `--network host` or port mapping |
+| Stdio servers (local) | Unlikely | Server must be installed in container |
+| Servers needing local files | Partial | Files must be mounted |
+| Servers with OAuth | Unlikely | Auth flow may not complete |
+
+### Attempting MCP with Docker
+
+```bash
+# Mount MCP config and use host network
+docker run -it --rm \
+  --network host \
+  -v $(pwd):/workspace \
+  -v ~/.codex:/home/coder/.codex \
+  -e OPENAI_API_KEY=$OPENAI_API_KEY \
+  ungb/codex
+```
+
+### Building a Custom Image with MCP Servers
+
+```dockerfile
+FROM ungb/codex:latest
+
+USER root
+RUN npm install -g @modelcontextprotocol/some-server
+USER coder
+```
+
+### MCP Investigation Needed
+
+Full MCP support requires further investigation. If you have solutions, please open an issue or PR!
 
 ## Authentication
 
 ### Option 1: API Key (Recommended for Docker)
 
-Get an API key from [OpenAI Platform](https://platform.openai.com/api-keys) and pass it as an environment variable:
+Get an API key from [OpenAI Platform](https://platform.openai.com/api-keys):
 
 ```bash
 -e OPENAI_API_KEY=sk-...
@@ -98,36 +226,49 @@ Get an API key from [OpenAI Platform](https://platform.openai.com/api-keys) and 
 
 ### Option 2: ChatGPT OAuth Login
 
-For browser-based OAuth, expose port 1455 for the callback:
+OAuth login is a two-step process:
+
+**Step 1: Login (once)**
 
 ```bash
+# Login with browser OAuth - expose port 1455 for callback
 docker run -it --rm \
   -p 1455:1455 \
-  -v $(pwd):/workspace \
-  -v codex-config:/home/coder/.codex \
+  -v ~/.codex:/home/coder/.codex \
   ungb/codex \
   codex login
 ```
 
-Or use host network mode:
+Or use host network:
 
 ```bash
 docker run -it --rm \
   --network host \
-  -v $(pwd):/workspace \
-  -v codex-config:/home/coder/.codex \
+  -v ~/.codex:/home/coder/.codex \
   ungb/codex \
   codex login
 ```
+
+**Step 2: Use normally**
+
+```bash
+# Now run without API key - tokens are in ~/.codex
+docker run -it --rm \
+  -v $(pwd):/workspace \
+  -v ~/.codex:/home/coder/.codex \
+  ungb/codex
+```
+
+> **Note**: Mount `~/.codex` from your host so tokens persist between container runs.
 
 ## Volume Mounts
 
 | Mount | Purpose |
 |-------|---------|
 | `/workspace` | Your project directory (required) |
-| `/home/coder/.codex` | Codex config and cache (optional, for persistence) |
-| `/home/coder/.ssh` | SSH keys for git operations (optional, read-only) |
-| `/home/coder/.gitconfig` | Git configuration (optional, read-only) |
+| `/home/coder/.codex` | Codex config, instructions, history |
+| `/home/coder/.ssh` | SSH keys for git operations (read-only) |
+| `/home/coder/.gitconfig` | Git configuration (read-only) |
 
 ## Environment Variables
 
@@ -135,7 +276,7 @@ docker run -it --rm \
 |----------|----------|-------------|
 | `OPENAI_API_KEY` | Yes* | Your OpenAI API key |
 | `OPENAI_ORG_ID` | No | OpenAI organization ID |
-| `OPENAI_API_BASE` | No | Custom API endpoint (for proxies) |
+| `OPENAI_API_BASE` | No | Custom API endpoint |
 
 *Required unless using OAuth login
 
@@ -144,6 +285,36 @@ docker run -it --rm \
 | Port | Purpose |
 |------|---------|
 | 1455 | OAuth callback for `codex login` |
+
+## Utility Commands
+
+```bash
+# Check version
+docker run --rm ungb/codex codex --version
+
+# Show help
+docker run --rm ungb/codex codex --help
+
+# View configuration
+docker run --rm \
+  -v ~/.codex:/home/coder/.codex \
+  ungb/codex \
+  cat /home/coder/.codex/config.json
+```
+
+## Sandbox Mode
+
+Codex recommends Docker for sandboxing. When you run Codex inside this container, it's already isolated from your host system.
+
+For nested Docker (Docker-in-Docker), mount the Docker socket:
+
+```bash
+docker run -it --rm \
+  -v $(pwd):/workspace \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -e OPENAI_API_KEY=$OPENAI_API_KEY \
+  ungb/codex
+```
 
 ## Building Locally
 
@@ -157,8 +328,6 @@ docker build -t codex .
 
 ### Permission Denied on Mounted Files
 
-The container runs as user `coder` (UID 1000). If you have permission issues:
-
 ```bash
 # Run with your user ID
 docker run -it --rm \
@@ -169,8 +338,6 @@ docker run -it --rm \
 ```
 
 ### Git Operations Failing
-
-Ensure SSH keys are mounted and git is configured:
 
 ```bash
 docker run -it --rm \
@@ -188,22 +355,25 @@ Ensure port 1455 is exposed:
 ```bash
 docker run -it --rm \
   -p 1455:1455 \
-  -v $(pwd):/workspace \
-  -v codex-config:/home/coder/.codex \
+  -v ~/.codex:/home/coder/.codex \
   ungb/codex \
   codex login
 ```
 
-## Sandbox Mode
+## Shell Alias (Convenience)
 
-Codex supports running in sandbox mode using Docker. When you run Codex inside this container, it's already isolated. For nested Docker support (Docker-in-Docker), mount the Docker socket:
+Add to your `~/.bashrc` or `~/.zshrc`:
 
 ```bash
-docker run -it --rm \
+alias codex-docker='docker run -it --rm \
   -v $(pwd):/workspace \
-  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v ~/.codex:/home/coder/.codex \
+  -v ~/.ssh:/home/coder/.ssh:ro \
+  -v ~/.gitconfig:/home/coder/.gitconfig:ro \
   -e OPENAI_API_KEY=$OPENAI_API_KEY \
-  ungb/codex
+  ungb/codex codex'
+
+# Usage: codex-docker "explain this code"
 ```
 
 ## License

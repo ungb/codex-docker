@@ -4,24 +4,45 @@ services:
     build: .
     container_name: openai-codex
     volumes:
-      # Mount your project directory
-      - ./workspace:/workspace
-      # Persist Codex configuration between runs
-      - codex-config:/home/coder/.codex
+      # Mount your project directory (or use ./workspace)
+      - .:/workspace
+      # Share your host's Codex config (instructions, history, OAuth tokens)
+      - ~/.codex:/home/coder/.codex
       # SSH keys for git operations (read-only)
       - ~/.ssh:/home/coder/.ssh:ro
       # Git configuration (read-only)
       - ~/.gitconfig:/home/coder/.gitconfig:ro
     environment:
-      # Set your OpenAI API key
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # Set your OpenAI API key (not needed if using OAuth)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
     ports:
       # OAuth callback port
       - "1455:1455"
     stdin_open: true
     tty: true
-    # Uncomment for host network mode (useful for OAuth)
+    working_dir: /workspace
+    # Uncomment for OAuth login
     # network_mode: host
+
+  # Alternative: Use named volume instead of host mount
+  codex-fresh:
+    image: ungb/codex:latest
+    build: .
+    container_name: openai-codex-fresh
+    volumes:
+      - .:/workspace
+      - codex-config:/home/coder/.codex
+      - ~/.ssh:/home/coder/.ssh:ro
+      - ~/.gitconfig:/home/coder/.gitconfig:ro
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    ports:
+      - "1455:1455"
+    stdin_open: true
+    tty: true
+    working_dir: /workspace
+    profiles:
+      - fresh
 
 volumes:
   codex-config:
