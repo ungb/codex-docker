@@ -1,0 +1,16 @@
+# Environment files
+.env
+.env.local
+
+# Workspace directory (user's code)
+workspace/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

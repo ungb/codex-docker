@@ -1,0 +1,28 @@
+services:
+  codex:
+    image: ungb/codex:latest
+    build: .
+    container_name: openai-codex
+    volumes:
+      # Mount your project directory
+      - ./workspace:/workspace
+      # Persist Codex configuration between runs
+      - codex-config:/home/coder/.codex
+      # SSH keys for git operations (read-only)
+      - ~/.ssh:/home/coder/.ssh:ro
+      # Git configuration (read-only)
+      - ~/.gitconfig:/home/coder/.gitconfig:ro
+    environment:
+      # Set your OpenAI API key
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    ports:
+      # OAuth callback port
+      - "1455:1455"
+    stdin_open: true
+    tty: true
+    # Uncomment for host network mode (useful for OAuth)
+    # network_mode: host
+
+volumes:
+  codex-config:
+    name: codex-config

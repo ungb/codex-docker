@@ -1,0 +1,21 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+LICENSE
+
+# Environment files
+.env
+.env.*
+
+# Workspace
+workspace/
+
+# GitHub
+.github/
+
+# OS
+.DS_Store
+Thumbs.db
