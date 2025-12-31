@@ -35,6 +35,8 @@ WORKDIR /workspace
 # Environment variables
 ENV HOME=/home/coder
 ENV CODEX_CONFIG_DIR=/home/coder/.codex
+ENV TERM=xterm-256color
+ENV COLORTERM=truecolor
 
 # Expose OAuth callback port
 EXPOSE 1455
