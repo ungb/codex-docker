@@ -29,7 +29,9 @@ docker run -it --rm \
   ungb/codex
 ```
 
-### One-Shot Commands
+### One-Shot Commands (Non-Interactive)
+
+Use `codex exec` (or `codex e`) for non-interactive mode:
 
 ```bash
 # Ask a question about your codebase
@@ -37,28 +39,39 @@ docker run -it --rm \
   -v $(pwd):/workspace \
   -e OPENAI_API_KEY=$OPENAI_API_KEY \
   ungb/codex \
-  codex "explain the architecture of this project"
+  codex exec "explain the architecture of this project"
 
 # Generate code
 docker run -it --rm \
   -v $(pwd):/workspace \
   -e OPENAI_API_KEY=$OPENAI_API_KEY \
   ungb/codex \
-  codex "add input validation to the user form"
+  codex exec "add input validation to the user form"
 
-# Fix bugs
+# Fix bugs (with auto-approval)
 docker run -it --rm \
   -v $(pwd):/workspace \
   -e OPENAI_API_KEY=$OPENAI_API_KEY \
   ungb/codex \
-  codex "fix the type errors in src/utils"
+  codex exec --ask-for-approval never "fix the type errors in src/utils"
 
-# Refactor code
+# JSON output (for scripts/automation)
 docker run -it --rm \
   -v $(pwd):/workspace \
   -e OPENAI_API_KEY=$OPENAI_API_KEY \
   ungb/codex \
-  codex "refactor this function to use async/await"
+  codex exec --json "list all TODO comments"
+```
+
+### Piping Input
+
+```bash
+# Pipe prompt from stdin
+echo "explain this code" | docker run -i --rm \
+  -v $(pwd):/workspace \
+  -e OPENAI_API_KEY=$OPENAI_API_KEY \
+  ungb/codex \
+  codex exec -
 ```
 
 ### With Full Configuration (Recommended)
@@ -94,8 +107,8 @@ echo "OPENAI_API_KEY=your-key-here" > .env
 # Interactive session
 docker compose run --rm codex
 
-# One-shot command
-docker compose run --rm codex codex "explain this code"
+# One-shot command (non-interactive)
+docker compose run --rm codex codex exec "explain this code"
 ```
 
 ### Full Auto Mode (Careful!)
@@ -107,6 +120,13 @@ docker run -it --rm \
   -e OPENAI_API_KEY=$OPENAI_API_KEY \
   ungb/codex \
   codex --full-auto "implement the TODO items in this file"
+
+# YOLO mode - no approvals, no sandbox (dangerous!)
+docker run -it --rm \
+  -v $(pwd):/workspace \
+  -e OPENAI_API_KEY=$OPENAI_API_KEY \
+  ungb/codex \
+  codex exec --yolo "fix the failing tests"
 ```
 
 ### Quiet Mode
@@ -117,7 +137,7 @@ docker run -it --rm \
   -v $(pwd):/workspace \
   -e OPENAI_API_KEY=$OPENAI_API_KEY \
   ungb/codex \
-  codex --quiet "fix the failing tests"
+  codex --quiet
 ```
 
 ## Sharing Your Codex Configuration
@@ -373,7 +393,8 @@ alias codex-docker='docker run -it --rm \
   -e OPENAI_API_KEY=$OPENAI_API_KEY \
   ungb/codex codex'
 
-# Usage: codex-docker "explain this code"
+# Usage (interactive): codex-docker
+# Usage (one-shot):    codex-docker exec "explain this code"
 ```
 
 ## License
